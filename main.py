@@ -13,6 +13,6 @@ def print_hi(name):
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     pt = hpsl.GameFile.Download()
-    print(pt.get_version_json('1.17'))
+    print(pt.complete_files(pt.get_version_json('1.8'), 'F:\\.minecraft'))
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
