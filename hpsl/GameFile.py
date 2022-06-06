@@ -5,6 +5,7 @@ import platform
 import sys
 
 import hpsl.Network
+from hpsl import Util
 
 
 class Download:
@@ -119,8 +120,7 @@ class Download:
     @staticmethod
     def __download_lib_file(minecraft_dir, path, save_path, url, sha1):
         save_path = os.path.join(save_path, minecraft_dir, 'libraries')
-        for path_fragment in path.split('/'):
-            save_path = os.path.join(save_path, path_fragment)
+        save_path = Util.path_conversion(path, save_path)
         if not os.path.exists(os.path.dirname(save_path)):
             os.makedirs(os.path.dirname(save_path))
         if not os.path.exists(save_path):
@@ -133,6 +133,8 @@ class Download:
                     hpsl.Network.download(url, save_path)
                     if i > 3:
                         break
+
+
 
     def download_client(self, file_json: json, minecraft_dir: str, name: str):
 
@@ -176,10 +178,9 @@ class Client:
     def save_client_json(self, name: str, mc_dir: str, client_json: json):
         path = os.path.join(mc_dir, 'versions', name, '{}.json'.format(name))
         if not os.path.exists(os.path.dirname(path)):
-
             os.makedirs(os.path.dirname(path))
         open(path, 'w', encoding='utf8').write(json.dumps(client_json))
 
-    def is_client_json_exist(self,name: str, mc_dir: str):
+    def is_client_json_exist(self, name: str, mc_dir: str):
         path = os.path.join(mc_dir, 'versions', name, '{}.json'.format(name))
         return os.path.exists(path)
