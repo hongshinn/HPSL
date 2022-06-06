@@ -9,6 +9,7 @@ from hpsl import Util
 
 
 class Download:
+
     def __init__(self):
         self.bmclapi = {'http://launchermeta.mojang.com/': 'https://bmclapi2.bangbang93.com/',
                         'https://launcher.mojang.com/': 'https://bmclapi2.bangbang93.com/',
@@ -72,7 +73,7 @@ class Download:
                         'https://libraries.minecraft.net/'])
                 size = str(download_parameters['size'])
                 return_list.append([path, size, sha1, url, 'lib'])
-            if 'classifiers' in lib_json:
+            if 'classifiers' in lib_json['downloads']:
 
                 if sys.platform.startswith('linux'):
                     # linux
@@ -84,7 +85,9 @@ class Download:
 
                 elif sys.platform.startswith('win32') or sys.platform.startswith('cygwin'):
                     # win
+
                     if 'natives-windows' in lib_json['downloads']['classifiers']:
+
                         download_type = 'natives-windows'
                     elif platform.architecture()[0] == '64bit':
                         download_type = 'natives-windows-64'
@@ -96,13 +99,14 @@ class Download:
                 else:
                     download_type = ''
 
-                download_parameters = lib_json['classifiers'][download_type]
+                download_parameters = lib_json['downloads']['classifiers'][download_type]
                 path = str(download_parameters['path'])
                 sha1 = str(download_parameters['sha1'])
                 url = str(download_parameters['url']).replace(
                     'https://libraries.minecraft.net/', self.api[
                         'https://libraries.minecraft.net/'])
                 size = str(download_parameters['size'])
+
                 return_list.append([path, size, sha1, url, 'lib'])
 
         # get main file
@@ -120,7 +124,7 @@ class Download:
     @staticmethod
     def __download_lib_file(minecraft_dir, path, save_path, url, sha1):
         save_path = os.path.join(save_path, minecraft_dir, 'libraries')
-        save_path = Util.path_conversion(path, save_path)
+        save_path = Util.path_conversion(save_path,path)
         if not os.path.exists(os.path.dirname(save_path)):
             os.makedirs(os.path.dirname(save_path))
         if not os.path.exists(save_path):
@@ -173,7 +177,7 @@ class Download:
 class Client:
     def get_client_json(self, ver: str, mc_dir: str) -> json:
         path = os.path.join(mc_dir, 'versions', ver, '{}.json'.format(ver))
-        return json.loads(open(path, 'r', encoding='utf-8').read())
+        return json.load(open(path, 'r', encoding='utf-8'))
 
     def save_client_json(self, name: str, mc_dir: str, client_json: json):
         path = os.path.join(mc_dir, 'versions', name, '{}.json'.format(name))
