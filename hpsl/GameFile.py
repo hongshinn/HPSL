@@ -1,9 +1,10 @@
+import hashlib
 import json
 import os
-import hpsl.Network
-import sys
 import platform
-import hashlib
+import sys
+
+import hpsl.Network
 
 
 class Download:
@@ -30,11 +31,11 @@ class Download:
 
         return json.loads(data)
 
-    def get_version_json(self, ver: str) -> json:
+    def get_client_json(self, ver: str) -> json:
 
-        return json.loads(self.get_version_json_text(ver))
+        return json.loads(self.get_client_json_text(ver))
 
-    def get_version_json_text(self, ver: str) -> str:
+    def get_client_json_text(self, ver: str) -> str:
         url = ''
         for i in self.get_versions_list()['versions']:
             if i['id'] == ver:
@@ -46,7 +47,18 @@ class Download:
 
         return data
 
-    def get_game_files_list(self, file_json: json) -> list:
+    def complete_files(self, file_json: json, minecraft_dir: str):
+        save_path = ''
+
+        for download_parameters in self.get_client_files_list(file_json):
+            if download_parameters[4] == 'lib':
+                try:
+                    self.__download_lib_file(minecraft_dir, download_parameters[0], save_path, download_parameters[3],
+                                             download_parameters[2])
+                except BaseException as err:
+                    raise err
+
+    def get_client_files_list(self, file_json: json) -> list:
         return_list = []
         # get lib
         for lib_json in file_json['libraries']:
@@ -104,16 +116,6 @@ class Download:
 
         return return_list
 
-    def complete_files(self, file_json: json, minecraft_dir: str):
-        save_path = ''
-        for download_parameters in self.get_game_files_list(file_json):
-            if download_parameters[4] == 'lib':
-                try:
-                    self.__download_lib_file(minecraft_dir, download_parameters[0], save_path, download_parameters[3],
-                                             download_parameters[2])
-                except BaseException as err:
-                    raise err
-
     @staticmethod
     def __download_lib_file(minecraft_dir, path, save_path, url, sha1):
         save_path = os.path.join(save_path, minecraft_dir, 'libraries')
@@ -132,12 +134,29 @@ class Download:
                     if i > 3:
                         break
 
-    @staticmethod
-    def download_client(file_json: json, minecraft_dir: str, name: str):
+    def download_client(self, file_json: json, minecraft_dir: str, name: str):
+
         try:
             save_path = os.path.join(minecraft_dir, 'versions', name, '{}.jar'.format(name))
+            if not os.path.exists(os.path.dirname(save_path)):
+                os.makedirs(os.path.dirname(save_path))
+            if not os.path.exists(save_path):
+                hpsl.Network.download(str(file_json['downloads']['client']['url']).replace(
+                    'https://launcher.mojang.com/', self.api[
+                        'https://launcher.mojang.com/']), save_path)
+                if os.path.exists(save_path):
+                    i = 0
+                    while hashlib.sha1(open(save_path, 'rb').read()).hexdigest() != str(file_json['downloads'][
+                                                                                            'client']['sha1']):
+                        i += 1
+                        print('The downloaded file sha1 does not match')
 
-            hpsl.Network.download(file_json['downloads']['client']['url'], save_path)
+                        hpsl.Network.download(str(file_json['downloads']['client']['url']).replace(
+                            'https://launcher.mojang.com/', self.api[
+                                'https://launcher.mojang.com/']), save_path)
+                        if i > 3:
+                            break
+
         except BaseException as err:
             raise err
 
@@ -147,3 +166,20 @@ class Download:
             hpsl.Network.download(file_json['downloads']['server']['url'], save_path)
         except BaseException as err:
             raise err
+
+
+class Client:
+    def get_client_json(self, ver: str, mc_dir: str) -> json:
+        path = os.path.join(mc_dir, 'versions', ver, '{}.json'.format(ver))
+        return json.loads(open(path, 'r', encoding='utf-8').read())
+
+    def save_client_json(self, name: str, mc_dir: str, client_json: json):
+        path = os.path.join(mc_dir, 'versions', name, '{}.json'.format(name))
+        if not os.path.exists(os.path.dirname(path)):
+
+            os.makedirs(os.path.dirname(path))
+        open(path, 'w', encoding='utf8').write(json.dumps(client_json))
+
+    def is_client_json_exist(self,name: str, mc_dir: str):
+        path = os.path.join(mc_dir, 'versions', name, '{}.json'.format(name))
+        return os.path.exists(path)
