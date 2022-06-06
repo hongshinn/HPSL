@@ -11,23 +11,21 @@ class Download:
         self.bmclapi = {'http://launchermeta.mojang.com/': 'https://bmclapi2.bangbang93.com/',
                         'https://launcher.mojang.com/': 'https://bmclapi2.bangbang93.com/',
                         'https://files.minecraftforge.net/maven/': 'https://bmclapi2.bangbang93.com/maven/',
-                        'https://libraries.minecraft.net/': 'https://bmclapi2.bangbang93.com/maven/',
-                        'https://launcher.mojang.com/v1/objects/': 'https://bmclapi.bangbang93.com/v1/objects/'}
+                        'https://libraries.minecraft.net/': 'https://bmclapi2.bangbang93.com/maven/'}
 
         self.mcbbsapi = {}
         for key, value in self.bmclapi.items():
             self.mcbbsapi[key] = value.replace('https://bmclapi2.bangbang93.com', 'https://download.mcbbs.net')
 
-        self.mojangapi = {'http://launchermeta.mojang.com/': 'http://launchermeta.mojang.com/',
+        self.mojangapi = {'https://launchermeta.mojang.com/': 'https://launchermeta.mojang.com/',
                           'https://launcher.mojang.com/': 'https://launcher.mojang.com/',
                           'https://files.minecraftforge.net/maven/': 'https://files.minecraftforge.net/maven/',
-                          'https://libraries.minecraft.net/': 'https://libraries.minecraft.net/',
-                          'https://launcher.mojang.com/v1/objects/': 'https://launcher.mojang.com/v1/objects/'}
+                          'https://libraries.minecraft.net/': 'https://libraries.minecraft.net/'}
 
         self.api = self.mojangapi
 
     def get_versions_list(self) -> json:
-        url = self.api['http://launchermeta.mojang.com/'] + 'mc/game/version_manifest.json'
+        url = self.api['https://launchermeta.mojang.com/'] + 'mc/game/version_manifest.json'
         data = hpsl.Network.web_request(url)
 
         return json.loads(data)
@@ -37,12 +35,14 @@ class Download:
         return json.loads(self.get_version_json_text(ver))
 
     def get_version_json_text(self, ver: str) -> str:
-        url = self.api['http://launchermeta.mojang.com/'] + '/version/' + ver + '/json'
-
+        url = ''
+        for i in self.get_versions_list()['versions']:
+            if i['id'] == ver:
+                url = i['url'].replace('https://launchermeta.mojang.com/', self.api['https://launchermeta.mojang.com/'])
         try:
             data = hpsl.Network.web_request(url)
-        finally:
-            pass
+        except BaseException as err:
+            raise err
 
         return data
 
@@ -53,7 +53,7 @@ class Download:
             if 'artifact' in lib_json['downloads']:
                 download_parameters = lib_json['downloads']['artifact']
                 path = str(download_parameters['path'])
-                sha1 = str(download_parameters['size'])
+                sha1 = str(download_parameters['sha1'])
                 url = str(download_parameters['url']).replace(
                     'https://libraries.minecraft.net/', self.api[
                         'https://libraries.minecraft.net/'])
@@ -95,10 +95,10 @@ class Download:
         # get main file
         download_parameters = file_json['downloads']['client']
         path = ''
-        sha1 = str(download_parameters['size'])
+        sha1 = str(download_parameters['sha1'])
         url = str(download_parameters['url']).replace(
-            'https://launcher.mojang.com/v1/objects/', self.api[
-                'https://launcher.mojang.com/v1/objects/'])
+            'https://launcher.mojang.com/', self.api[
+                'https://launcher.mojang.com/'])
         size = str(download_parameters['size'])
         return_list.append([path, size, sha1, url, 'lib'])
 
@@ -107,11 +107,12 @@ class Download:
     def complete_files(self, file_json: json, minecraft_dir: str):
         save_path = ''
         for download_parameters in self.get_game_files_list(file_json):
-            try:
-                self.__download_lib_file(minecraft_dir, download_parameters[0], save_path, download_parameters[3],
-                                         download_parameters[1])
-            except BaseException as err:
-                raise err
+            if download_parameters[4] == 'lib':
+                try:
+                    self.__download_lib_file(minecraft_dir, download_parameters[0], save_path, download_parameters[3],
+                                             download_parameters[2])
+                except BaseException as err:
+                    raise err
 
     @staticmethod
     def __download_lib_file(minecraft_dir, path, save_path, url, sha1):
@@ -121,9 +122,15 @@ class Download:
         if not os.path.exists(os.path.dirname(save_path)):
             os.makedirs(os.path.dirname(save_path))
         if not os.path.exists(save_path):
-
-            while hashlib.sha1(open('save_path', 'rb').read()) != sha1:
-                hpsl.Network.download(url, save_path)
+            hpsl.Network.download(url, save_path)
+            if os.path.exists(save_path):
+                i = 0
+                while hashlib.sha1(open(save_path, 'rb').read()).hexdigest() != sha1:
+                    i += 1
+                    print('The downloaded file sha1 does not match')
+                    hpsl.Network.download(url, save_path)
+                    if i > 3:
+                        break
 
     @staticmethod
     def download_client(file_json: json, minecraft_dir: str, name: str):
