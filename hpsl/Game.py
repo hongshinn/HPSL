@@ -14,15 +14,16 @@ class Launch:
     def launch(self, ver: str, minecraft_dir: str, java_path: str, jvm: str, player_name: str, uuid: str,
                access_token: str,
                extra_parameters: str,
-               xmn='256m', xmx='1024m', height=480, width=854, version_isolation=False):
+               xmn='256m', xmx='1024m', height=480, width=854, version_isolation=False, version_type='HPSL'):
         os.system(self.get_launch_script(ver, minecraft_dir, java_path, jvm, player_name, uuid,
                                          access_token,
-                                         extra_parameters, xmn, xmx, height, width, version_isolation))
+                                         extra_parameters, xmn, xmx, height, width, version_isolation, version_type))
 
     def get_launch_script(self, ver: str, minecraft_dir: str, java_path: str, jvm: str, player_name: str, uuid: str,
                           access_token: str,
                           extra_parameters: str,
-                          xmn='256m', xmx='1024m', height=480, width=854, version_isolation=False) -> str:
+                          xmn='256m', xmx='1024m', height=480, width=854, version_isolation=False,
+                          version_type='HPSL') -> str:
         # set extra parameters
         extra_parameters += '--height {} --width {}'.format(str(height), str(width))
         # set jvm
@@ -50,7 +51,8 @@ class Launch:
             replace('${auth_uuid}', uuid). \
             replace('${auth_access_token}', access_token). \
             replace('${user_properties}', '{}'). \
-            replace('${user_type}', 'mojang')
+            replace('${user_type}', 'mojang'). \
+            replace('${version_type}', version_type)
         if version_isolation:
             minecraft_arg = minecraft_arg.replace('${game_directory}', os.path.join(minecraft_dir, 'versions', ver))
         else:
@@ -70,7 +72,7 @@ class Launch:
         client_json = self.class_client.get_client_json(ver, mc_dir)
 
         for lib_json in client_json['libraries']:
-
+            download_type = ''
             if 'classifiers' in lib_json['downloads']:
                 if sys.platform.startswith('linux'):
                     # linux
@@ -85,19 +87,21 @@ class Launch:
                     if 'natives-windows' in lib_json['downloads']['classifiers']:
                         download_type = 'natives-windows'
                     elif platform.architecture()[0] == '64bit':
-                        download_type = 'natives-windows-64'
+                        if 'natives-windows-64' in lib_json['downloads']['classifiers']:
+                            download_type = 'natives-windows-64'
                     elif platform.architecture()[0] == '32bit':
-                        download_type = 'natives-windows-32'
+                        if 'natives-windows-32' in lib_json['downloads']['classifiers']:
+                            download_type = 'natives-windows-32'
                     else:
                         download_type = ''
 
                 else:
                     download_type = ''
-
-                download_parameters = lib_json['downloads']['classifiers'][download_type]
-                path = str(download_parameters['path'])
-                path = Util.path_conversion(os.path.join(mc_dir, 'libraries'), path)
-                Util.un_zip(path, os.path.join(mc_dir, 'versions', ver, '{}-natives'.format(ver)))
+                if download_type != '':
+                    download_parameters = lib_json['downloads']['classifiers'][download_type]
+                    path = str(download_parameters['path'])
+                    path = Util.path_conversion(os.path.join(mc_dir, 'libraries'), path)
+                    Util.un_zip(path, os.path.join(mc_dir, 'versions', ver, '{}-natives'.format(ver)))
 
     def get_classpath(self, minecraft_dir, ver, client_json):
 

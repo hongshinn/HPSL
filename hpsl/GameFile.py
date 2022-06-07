@@ -11,7 +11,7 @@ from hpsl import Util
 class Download:
 
     def __init__(self):
-        self.bmclapi = {'http://launchermeta.mojang.com/': 'https://bmclapi2.bangbang93.com/',
+        self.bmclapi = {'https://launchermeta.mojang.com/': 'https://bmclapi2.bangbang93.com/',
                         'https://launcher.mojang.com/': 'https://bmclapi2.bangbang93.com/',
                         'https://files.minecraftforge.net/maven/': 'https://bmclapi2.bangbang93.com/maven/',
                         'https://libraries.minecraft.net/': 'https://bmclapi2.bangbang93.com/maven/',
@@ -103,7 +103,7 @@ class Download:
                 size = str(download_parameters['size'])
                 return_list.append([path, size, sha1, url, 'lib'])
             if 'classifiers' in lib_json['downloads']:
-
+                download_type = ''
                 if sys.platform.startswith('linux'):
                     # linux
                     download_type = 'natives-linux'
@@ -119,24 +119,26 @@ class Download:
 
                         download_type = 'natives-windows'
                     elif platform.architecture()[0] == '64bit':
-                        download_type = 'natives-windows-64'
+                        if 'natives-windows-64' in lib_json['downloads']['classifiers']:
+                            download_type = 'natives-windows-64'
                     elif platform.architecture()[0] == '32bit':
-                        download_type = 'natives-windows-32'
+                        if 'natives-windows-32' in lib_json['downloads']['classifiers']:
+                            download_type = 'natives-windows-32'
                     else:
                         download_type = ''
 
                 else:
                     download_type = ''
+                if download_type != '':
+                    download_parameters = lib_json['downloads']['classifiers'][download_type]
+                    path = str(download_parameters['path'])
+                    sha1 = str(download_parameters['sha1'])
+                    url = str(download_parameters['url']).replace(
+                        'https://libraries.minecraft.net/', self.api[
+                            'https://libraries.minecraft.net/'])
+                    size = str(download_parameters['size'])
 
-                download_parameters = lib_json['downloads']['classifiers'][download_type]
-                path = str(download_parameters['path'])
-                sha1 = str(download_parameters['sha1'])
-                url = str(download_parameters['url']).replace(
-                    'https://libraries.minecraft.net/', self.api[
-                        'https://libraries.minecraft.net/'])
-                size = str(download_parameters['size'])
-
-                return_list.append([path, size, sha1, url, 'lib'])
+                    return_list.append([path, size, sha1, url, 'lib'])
 
         # get main file
         download_parameters = file_json['downloads']['client']
