@@ -17,6 +17,8 @@ if __name__ == '__main__':
     # print(pt.get_game_files_list(json))
     print('Completing files')
     pt.complete_files(json, 'E:\\.minecraft')
+
     # pt.download_client(json, 'F:\\.minecraft', '1.8')
+    print('launching')
     print(lc.launch('1.8.9a', 'E:\\.minecraft', 'E:\\jdk1.8.0_261\\bin\\java.exe', '',
                     'hsn', '0', '0', '', '256m', '1024m'))

@@ -14,7 +14,8 @@ class Download:
         self.bmclapi = {'http://launchermeta.mojang.com/': 'https://bmclapi2.bangbang93.com/',
                         'https://launcher.mojang.com/': 'https://bmclapi2.bangbang93.com/',
                         'https://files.minecraftforge.net/maven/': 'https://bmclapi2.bangbang93.com/maven/',
-                        'https://libraries.minecraft.net/': 'https://bmclapi2.bangbang93.com/maven/'}
+                        'https://libraries.minecraft.net/': 'https://bmclapi2.bangbang93.com/maven/',
+                        'https://resources.download.minecraft.net/': 'https://bmclapi2.bangbang93.com/assets/'}
 
         self.mcbbsapi = {}
         for key, value in self.bmclapi.items():
@@ -23,7 +24,8 @@ class Download:
         self.mojangapi = {'https://launchermeta.mojang.com/': 'https://launchermeta.mojang.com/',
                           'https://launcher.mojang.com/': 'https://launcher.mojang.com/',
                           'https://files.minecraftforge.net/maven/': 'https://files.minecraftforge.net/maven/',
-                          'https://libraries.minecraft.net/': 'https://libraries.minecraft.net/'}
+                          'https://libraries.minecraft.net/': 'https://libraries.minecraft.net/',
+                          'https://resources.download.minecraft.net/': 'https://resources.download.minecraft.net/'}
 
         self.api = self.mojangapi
 
@@ -49,16 +51,43 @@ class Download:
 
         return data
 
-    def complete_files(self, file_json: json, minecraft_dir: str):
+    def complete_files(self, file_json: json, mc_dir: str):
         save_path = ''
 
         for download_parameters in self.get_client_files_list(file_json):
             if download_parameters[4] == 'lib':
                 try:
-                    self.__download_lib_file(minecraft_dir, download_parameters[0], save_path, download_parameters[3],
+                    self.__download_lib_file(mc_dir, download_parameters[0], save_path, download_parameters[3],
                                              download_parameters[2])
                 except BaseException as err:
                     raise err
+        self.complete_assets(file_json, mc_dir)
+
+    def complete_assets(self, file_json: json, mc_dir: str):
+        save_path = os.path.join(mc_dir, 'assets')
+        indexes_path = os.path.join(save_path, 'indexes', '{}.json'.format(file_json['assetIndex']['id']))
+
+        if not os.path.exists(os.path.dirname(indexes_path)):
+            os.makedirs(os.path.dirname(indexes_path))
+
+        if not os.path.exists(indexes_path):
+            hpsl.Network.download(file_json['assetIndex']['url'], indexes_path)
+
+        with open(indexes_path, 'r', encoding='utf8') as file:
+            indexes_json = json.load(file)
+
+        for file_name in indexes_json['objects']:
+            if file_name != '':
+                assets_hash = str(indexes_json['objects'][file_name]['hash'])
+                first_two_hash = str(indexes_json['objects'][file_name]['hash'])[:2]
+
+                if not os.path.exists(os.path.dirname(os.path.join(save_path, 'objects', first_two_hash, assets_hash))):
+                    os.makedirs(os.path.dirname(os.path.join(save_path, 'objects', first_two_hash, assets_hash)))
+                if not os.path.exists(os.path.join(save_path, 'objects', first_two_hash, assets_hash)):
+                    hpsl.Network.download(
+                        '{}{}/{}'.format(self.api['https://resources.download.minecraft.net/'], first_two_hash,
+                                         assets_hash),
+                        os.path.join(save_path, 'objects', first_two_hash, assets_hash))
 
     def get_client_files_list(self, file_json: json) -> list:
         return_list = []
@@ -122,9 +151,9 @@ class Download:
         return return_list
 
     @staticmethod
-    def __download_lib_file(minecraft_dir, path, save_path, url, sha1):
-        save_path = os.path.join(save_path, minecraft_dir, 'libraries')
-        save_path = Util.path_conversion(save_path,path)
+    def __download_lib_file(mc_dir, path, save_path, url, sha1):
+        save_path = os.path.join(save_path, mc_dir, 'libraries')
+        save_path = Util.path_conversion(save_path, path)
         if not os.path.exists(os.path.dirname(save_path)):
             os.makedirs(os.path.dirname(save_path))
         if not os.path.exists(save_path):
@@ -137,8 +166,6 @@ class Download:
                     hpsl.Network.download(url, save_path)
                     if i > 3:
                         break
-
-
 
     def download_client(self, file_json: json, minecraft_dir: str, name: str):
 

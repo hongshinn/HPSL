@@ -38,13 +38,16 @@ class Launch:
         # get main class
         main_class = str(client_json['mainClass'])
 
+        # set assets
+        assets_path = os.path.join(minecraft_dir, 'assets')
+
         # get mc arg
         minecraft_arg = str(client_json['minecraftArguments']). \
             replace('${game_directory}', minecraft_dir). \
             replace('${auth_player_name}', player_name). \
             replace('${version_name}', ver). \
-            replace('${assets_root}', os.path.join(minecraft_dir)). \
-            replace('${assets_index_name}', os.path.join(minecraft_dir)). \
+            replace('${assets_root}', assets_path). \
+            replace('${assets_index_name}', client_json['assetIndex']['id']). \
             replace('${auth_uuid}', uuid). \
             replace('${auth_access_token}', access_token). \
             replace('${user_properties}', '{}'). \
