@@ -29,19 +29,19 @@ class Download:
 
         self.api = self.mojangapi
 
-    def get_versions_list(self) -> json:
+    def get_versions_list_online(self) -> json:
         url = self.api['https://launchermeta.mojang.com/'] + 'mc/game/version_manifest.json'
         data = hpsl.Network.web_request(url)
 
         return json.loads(data)
 
-    def get_client_json(self, ver: str) -> json:
+    def get_client_json_online(self, ver: str) -> json:
 
-        return json.loads(self.get_client_json_text(ver))
+        return json.loads(self.get_client_json_text_online(ver))
 
-    def get_client_json_text(self, ver: str) -> str:
+    def get_client_json_text_online(self, ver: str) -> str:
         url = ''
-        for i in self.get_versions_list()['versions']:
+        for i in self.get_versions_list_online()['versions']:
             if i['id'] == ver:
                 url = i['url'].replace('https://launchermeta.mojang.com/', self.api['https://launchermeta.mojang.com/'])
         try:
@@ -55,7 +55,7 @@ class Download:
         save_path = ''
 
         for download_parameters in self.get_client_files_list(file_json):
-            if download_parameters[4] == 'lib':
+            if download_parameters[4] == 'lib' and (not os.path.exists(download_parameters[0])):
                 try:
                     self.__download_lib_file(mc_dir, download_parameters[0], save_path, download_parameters[3],
                                              download_parameters[2])
@@ -167,8 +167,8 @@ class Download:
                     if i > 3:
                         break
 
-    def download_client(self, file_json: json, minecraft_dir: str, name: str):
-
+    def download_client(self, name: str, minecraft_dir: str):
+        file_json = Client.get_client_json(name, minecraft_dir)
         try:
             save_path = os.path.join(minecraft_dir, 'versions', name, '{}.jar'.format(name))
             if not os.path.exists(os.path.dirname(save_path)):
@@ -202,16 +202,19 @@ class Download:
 
 
 class Client:
-    def get_client_json(self, ver: str, mc_dir: str) -> json:
+    @staticmethod
+    def get_client_json(ver: str, mc_dir: str) -> json:
         path = os.path.join(mc_dir, 'versions', ver, '{}.json'.format(ver))
         return json.load(open(path, 'r', encoding='utf-8'))
 
-    def save_client_json(self, name: str, mc_dir: str, client_json: json):
+    @staticmethod
+    def save_client_json(name: str, mc_dir: str, client_json: json):
         path = os.path.join(mc_dir, 'versions', name, '{}.json'.format(name))
         if not os.path.exists(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))
         open(path, 'w', encoding='utf8').write(json.dumps(client_json))
 
-    def is_client_json_exist(self, name: str, mc_dir: str):
+    @staticmethod
+    def is_client_json_exist(name: str, mc_dir: str):
         path = os.path.join(mc_dir, 'versions', name, '{}.json'.format(name))
         return os.path.exists(path)

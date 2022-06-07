@@ -14,15 +14,15 @@ class Launch:
     def launch(self, ver: str, minecraft_dir: str, java_path: str, jvm: str, player_name: str, uuid: str,
                access_token: str,
                extra_parameters: str,
-               xmn='256m', xmx='1024m', height=480, width=854):
+               xmn='256m', xmx='1024m', height=480, width=854, version_isolation=False):
         os.system(self.get_launch_script(ver, minecraft_dir, java_path, jvm, player_name, uuid,
                                          access_token,
-                                         extra_parameters, xmn, xmx, height, width))
+                                         extra_parameters, xmn, xmx, height, width, version_isolation))
 
     def get_launch_script(self, ver: str, minecraft_dir: str, java_path: str, jvm: str, player_name: str, uuid: str,
                           access_token: str,
                           extra_parameters: str,
-                          xmn='256m', xmx='1024m', height=480, width=854) -> str:
+                          xmn='256m', xmx='1024m', height=480, width=854, version_isolation=False) -> str:
         # set extra parameters
         extra_parameters += '--height {} --width {}'.format(str(height), str(width))
         # set jvm
@@ -43,7 +43,6 @@ class Launch:
 
         # get mc arg
         minecraft_arg = str(client_json['minecraftArguments']). \
-            replace('${game_directory}', minecraft_dir). \
             replace('${auth_player_name}', player_name). \
             replace('${version_name}', ver). \
             replace('${assets_root}', assets_path). \
@@ -52,6 +51,10 @@ class Launch:
             replace('${auth_access_token}', access_token). \
             replace('${user_properties}', '{}'). \
             replace('${user_type}', 'mojang')
+        if version_isolation:
+            minecraft_arg = minecraft_arg.replace('${game_directory}', os.path.join(minecraft_dir, 'versions', ver))
+        else:
+            minecraft_arg = minecraft_arg.replace('${game_directory}', minecraft_dir)
 
         # unzip natives
         self.unzip_natives(ver, minecraft_dir)
