@@ -72,7 +72,7 @@ class Download:
             os.makedirs(os.path.dirname(indexes_path))
 
         if not os.path.exists(indexes_path):
-            hpsl.Network.download(file_json['assetIndex']['url'], indexes_path)
+            hpsl.Network.download(file_json['assetIndex']['url'], indexes_path,multithreading=False)
 
         with open(indexes_path, 'r', encoding='utf8') as file:
             indexes_json = json.load(file)
