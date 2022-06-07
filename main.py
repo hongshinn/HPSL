@@ -8,7 +8,7 @@ if __name__ == '__main__':
     cf = hpsl.GameFile.Client()
 
     mc_dir = 'F:\\.minecraft'
-    ver = '1.12.2'
+    ver = '1.12'
     java_path = 'E:\\jdk1.8.0_261\\bin\\java.exe'
 
     if cf.is_client_json_exist(ver, mc_dir):
@@ -23,7 +23,8 @@ if __name__ == '__main__':
     pt.complete_files(json, mc_dir)
     print('Download client')
     pt.download_client(ver, mc_dir)
-
+    print(lc.get_launch_script(ver, mc_dir, java_path, '',
+                               'hsn', '0', '0', '', '256m', '1024m', version_isolation=False))
     print('Launching')
     print(lc.launch(ver, mc_dir, java_path, '',
-                    'hsn', '0', '0', '', '256m', '1024m', version_isolation=True))
+                    'hsn', '0', '0', '', '256m', '1024m', version_isolation=False))
