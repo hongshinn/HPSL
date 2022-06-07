@@ -1,15 +1,14 @@
 import hpsl.GameFile
-import hpsl.Game
 
 if __name__ == '__main__':
     pt = hpsl.GameFile.Download()
     pt.api = pt.mcbbsapi
-    lc = hpsl.Game.Launch()
+    lc = hpsl.GameFile.Launch()
     cf = hpsl.GameFile.Client()
 
     mc_dir = 'F:\\.minecraft'
-    ver = '1.12'
-    java_path = 'E:\\jdk1.8.0_261\\bin\\java.exe'
+    ver = 'minecheaft'
+    java_path = 'E:\\jdk-17\\jdk-17_windows-x64_bin\\jdk-17.0.2\\bin\\java.exe'
 
     if cf.is_client_json_exist(ver, mc_dir):
         json = cf.get_client_json(ver, mc_dir)
@@ -23,8 +22,6 @@ if __name__ == '__main__':
     pt.complete_files(json, mc_dir)
     print('Download client')
     pt.download_client(ver, mc_dir)
-    print(lc.get_launch_script(ver, mc_dir, java_path, '',
-                               'hsn', '0', '0', '', '256m', '1024m', version_isolation=False))
     print('Launching')
-    print(lc.launch(ver, mc_dir, java_path, '',
-                    'hsn', '0', '0', '', '256m', '1024m', version_isolation=False))
+    lc.launch(ver, mc_dir, java_path, '',
+              'hsn', '0', '0', '', '256m', '1024m', version_isolation=True)

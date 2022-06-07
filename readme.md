@@ -28,7 +28,7 @@ pt.complete_files(json, 'F:\\.minecraft')
 启动游戏
 ~~~ python
 import hpsl.Game
-lc = hpsl.Game.Launch()
+lc = hpsl.GameFile.Launch()
 lc.launch('1.8.9a', 'E:\\.minecraft', 'E:\\jdk1.8.0_261\\bin\\java.exe', '',
                 'hsn', '0', '0', '', '256m', '1024m')
 ~~~
