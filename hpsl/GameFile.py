@@ -72,7 +72,7 @@ class Download:
             os.makedirs(os.path.dirname(indexes_path))
 
         if not os.path.exists(indexes_path):
-            hpsl.Network.download(file_json['assetIndex']['url'], indexes_path,multithreading=False)
+            hpsl.Network.download(file_json['assetIndex']['url'], indexes_path, multithreading=False)
 
         with open(indexes_path, 'r', encoding='utf8') as file:
             indexes_json = json.load(file)
@@ -197,7 +197,7 @@ class Download:
             raise err
 
     @staticmethod
-    def download_server(file_json: json, save_path: str, name: str):
+    def download_server(file_json: json, save_path: str):
         try:
             hpsl.Network.download(file_json['downloads']['server']['url'], save_path)
         except BaseException as err:
@@ -221,6 +221,18 @@ class Client:
     def is_client_json_exist(name: str, mc_dir: str):
         path = os.path.join(mc_dir, 'versions', name, '{}.json'.format(name))
         return os.path.exists(path)
+
+    @staticmethod
+    def scan_java_path_windows() -> list:
+        java_list = []
+        for i in range(65, 91):
+            vol = chr(i) + ':\\'
+            if os.path.isdir(vol):
+                for root, file_dir, file_name in os.walk(vol):
+                    for file in file_name:
+                        if file == 'javaw.exe':
+                            java_list.append(os.path.join(root, file))
+        return java_list
 
 
 class Launch:
