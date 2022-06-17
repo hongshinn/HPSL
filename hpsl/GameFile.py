@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import platform
+import re
 import sys
 import threading
 
@@ -206,7 +207,17 @@ class MinecraftClient:
 
     def launch(self, java_path: str, jvm: str, player_login_parameters,
                extra_parameters: str,
-               xmn='256m', xmx='1024m', height=480, width=854, version_isolation=False, version_type=''):
+               xmn='256m', xmx='1024m', height=480, width=854, version_isolation=False, version_type='', lang=None):
+        if lang is not None:
+            if os.path.exists(os.path.join(self.mc_dir, 'options.txt')):
+                with open(os.path.join(self.mc_dir, 'options.txt'), 'r+', encoding='utf-8') as f:
+                    str_re = re.compile('lang:.*\n')
+                    str_write = str_re.sub('lang:{}\n'.format(lang), f.read())
+                    f.seek(0, 0)
+                    f.write(str_write)
+            else:
+                with open(os.path.join(self.mc_dir, 'options.txt'), 'x', encoding='utf-8') as f:
+                    f.write('lang:{}\n'.format(lang))
 
         os.popen(self.get_launch_script(java_path, jvm, player_login_parameters,
                                         extra_parameters, xmn, xmx, height, width, version_isolation, version_type))
@@ -509,3 +520,4 @@ class Download:
                         if file == 'javaw.exe':
                             java_list.append(os.path.join(root, file))
         return java_list
+
