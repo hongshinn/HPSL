@@ -1,6 +1,5 @@
 import threading
 import urllib.request
-import ssl
 
 
 class DownloadThread(threading.Thread):
@@ -23,11 +22,12 @@ def web_request(url):
     return data
 
 
-def download(url, path, multithreading=True, max_threads=64):
+def download(url, path, multithreading=True, max_threads=64) -> threading:
     if multithreading:
         semaphore = threading.BoundedSemaphore(max_threads)
         download_thread = DownloadThread(url, path, semaphore)
         download_thread.start()
+        return download_thread
     else:
         try:
             urllib.request.urlretrieve(url, path)

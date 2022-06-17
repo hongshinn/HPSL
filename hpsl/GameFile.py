@@ -1,96 +1,82 @@
-import hashlib
 import json
+import logging
 import os
 import platform
 import sys
+import threading
 
 import hpsl.Network
 from hpsl import Util, LauncherInformation
 
 
-class Download:
+class MinecraftClient:
+    def __init__(self, mc_dir: str, name: str):
+        # get logger
+        logging.basicConfig(filename='log.txt')
+        self.logger = logging.getLogger(__name__)
+        self.logger.info(
+            'MinecraftClient class initialization, minecraft directory: {}, client name: {}'.format(mc_dir, name))
+        self.name = name
+        self.mc_dir = mc_dir
+        self.path = os.path.join(mc_dir, 'versions', name)
+        self.jar_path = os.path.join(mc_dir, 'versions', name, '{}.jar'.format(name))
+        self.json_path = os.path.join(mc_dir, 'versions', name, '{}.json'.format(name))
 
-    def __init__(self):
+        try:
+            with open(self.json_path, 'r', encoding='utf-8') as f:
+                self.json = json.load(f)
+        except IOError as err:
+            self.logger.error(err)
+
         # 尽量不要用bmclapi,bmclapi的open bmclapi过不了ssl,会下载失败
         self.bmclapi = {'https://launchermeta.mojang.com/': 'https://bmclapi2.bangbang93.com/',
                         'https://launcher.mojang.com/': 'https://bmclapi2.bangbang93.com/',
                         'https://files.minecraftforge.net/maven/': 'https://bmclapi2.bangbang93.com/maven/',
                         'https://libraries.minecraft.net/': 'https://bmclapi2.bangbang93.com/maven/',
                         'https://resources.download.minecraft.net/': 'https://bmclapi2.bangbang93.com/assets/'}
-
         self.mcbbsapi = {}
         for key, value in self.bmclapi.items():
             self.mcbbsapi[key] = value.replace('https://bmclapi2.bangbang93.com', 'https://download.mcbbs.net')
-
         self.mojangapi = {'https://launchermeta.mojang.com/': 'https://launchermeta.mojang.com/',
                           'https://launcher.mojang.com/': 'https://launcher.mojang.com/',
                           'https://files.minecraftforge.net/maven/': 'https://files.minecraftforge.net/maven/',
                           'https://libraries.minecraft.net/': 'https://libraries.minecraft.net/',
                           'https://resources.download.minecraft.net/': 'https://resources.download.minecraft.net/'}
-
         self.api = self.mojangapi
 
-    def get_versions_list_online(self) -> json:
-        url = self.api['https://launchermeta.mojang.com/'] + 'mc/game/version_manifest.json'
-        data = hpsl.Network.web_request(url)
+    @staticmethod
+    def __download_lib_file(mc_dir, path, save_path, url) -> threading:
+        save_path = os.path.join(save_path, mc_dir, 'libraries')
+        save_path = Util.path_conversion(save_path, path)
+        if not os.path.exists(os.path.dirname(save_path)):
+            os.makedirs(os.path.dirname(save_path))
+        if not os.path.exists(save_path):
+            t = hpsl.Network.download(url, save_path)
+            return t
 
-        return json.loads(data)
+    def is_client_json_exists(self):
+        return os.path.exists(self.json_path)
 
-    def get_client_json_online(self, ver: str) -> json:
+    def is_client_jar_exists(self):
+        return os.path.exists(self.jar_path)
 
-        return json.loads(self.get_client_json_text_online(ver))
+    def set_client_json(self, client_json: json):
+        self.json = client_json
+        with open(self.json_path, 'w', encoding='utf-8') as f:
+            json.dump(json, f)
 
-    def get_client_json_text_online(self, ver: str) -> str:
-        url = ''
-        for i in self.get_versions_list_online()['versions']:
-            if i['id'] == ver:
-                url = i['url'].replace('https://launchermeta.mojang.com/', self.api['https://launchermeta.mojang.com/'])
+    def set_client_json_online(self, ver: str):
+        dl = Download()
         try:
-            data = hpsl.Network.web_request(url)
+            self.json = dl.get_client_json_online(ver)
+            with open(self.json_path, 'w', encoding='utf-8') as f:
+                json.dump(self.json, f)
         except BaseException as err:
-            raise err
+            self.logger.error(err)
 
-        return data
+    def get_client_files_list(self) -> list:
+        file_json = self.json
 
-    def complete_files(self, file_json: json, mc_dir: str):
-        save_path = ''
-
-        for download_parameters in self.get_client_files_list(file_json):
-            if download_parameters[4] == 'lib' and (not os.path.exists(download_parameters[0])):
-                try:
-                    self.__download_lib_file(mc_dir, download_parameters[0], save_path, download_parameters[3],
-                                             download_parameters[2])
-                except BaseException as err:
-                    raise err
-        self.complete_assets(file_json, mc_dir)
-
-    def complete_assets(self, file_json: json, mc_dir: str):
-        save_path = os.path.join(mc_dir, 'assets')
-        indexes_path = os.path.join(save_path, 'indexes', '{}.json'.format(file_json['assetIndex']['id']))
-
-        if not os.path.exists(os.path.dirname(indexes_path)):
-            os.makedirs(os.path.dirname(indexes_path))
-
-        if not os.path.exists(indexes_path):
-            hpsl.Network.download(file_json['assetIndex']['url'], indexes_path, multithreading=False)
-
-        with open(indexes_path, 'r', encoding='utf8') as file:
-            indexes_json = json.load(file)
-
-        for file_name in indexes_json['objects']:
-            if file_name != '':
-                assets_hash = str(indexes_json['objects'][file_name]['hash'])
-                first_two_hash = str(indexes_json['objects'][file_name]['hash'])[:2]
-
-                if not os.path.exists(os.path.dirname(os.path.join(save_path, 'objects', first_two_hash, assets_hash))):
-                    os.makedirs(os.path.dirname(os.path.join(save_path, 'objects', first_two_hash, assets_hash)))
-                if not os.path.exists(os.path.join(save_path, 'objects', first_two_hash, assets_hash)):
-                    hpsl.Network.download(
-                        '{}{}/{}'.format(self.api['https://resources.download.minecraft.net/'], first_two_hash,
-                                         assets_hash),
-                        os.path.join(save_path, 'objects', first_two_hash, assets_hash))
-
-    def get_client_files_list(self, file_json: json) -> list:
         return_list = []
         # get lib
         for lib_json in file_json['libraries']:
@@ -153,130 +139,104 @@ class Download:
 
         return return_list
 
-    @staticmethod
-    def __download_lib_file(mc_dir, path, save_path, url, sha1):
-        save_path = os.path.join(save_path, mc_dir, 'libraries')
-        save_path = Util.path_conversion(save_path, path)
-        if not os.path.exists(os.path.dirname(save_path)):
-            os.makedirs(os.path.dirname(save_path))
-        if not os.path.exists(save_path):
-            hpsl.Network.download(url, save_path)
-            if os.path.exists(save_path):
-                i = 0
-                while hashlib.sha1(open(save_path, 'rb').read()).hexdigest() != sha1:
-                    i += 1
-                    print('The downloaded file sha1 does not match')
-                    hpsl.Network.download(url, save_path)
-                    if i > 3:
-                        break
+    def complete_files(self):
+        mc_dir = self.mc_dir
+        if not self.is_client_jar_exists():
+            self.download_client()
+        save_path = ''
+        threading_list = []
+        for download_parameters in self.get_client_files_list():
+            if download_parameters[4] == 'lib' and (not os.path.exists(download_parameters[0])):
+                try:
+                    t = self.__download_lib_file(mc_dir, download_parameters[0], save_path, download_parameters[3])
+                    threading_list.append(t)
+                except BaseException as err:
+                    raise err
 
-    def download_client(self, name: str, minecraft_dir: str):
-        file_json = Client.get_client_json(name, minecraft_dir)
+        self.complete_assets()
+        for t in threading_list:
+            if t is not None:
+                t.join()
+
+    def complete_assets(self):
+        threading_list = []
+        mc_dir = self.mc_dir
+        file_json = self.json
+        save_path = os.path.join(mc_dir, 'assets')
+        indexes_path = os.path.join(save_path, 'indexes', '{}.json'.format(file_json['assetIndex']['id']))
+
+        if not os.path.exists(os.path.dirname(indexes_path)):
+            os.makedirs(os.path.dirname(indexes_path))
+
+        if not os.path.exists(indexes_path):
+            hpsl.Network.download(file_json['assetIndex']['url'], indexes_path, multithreading=False)
+
+        with open(indexes_path, 'r', encoding='utf8') as file:
+            indexes_json = json.load(file)
+
+        for file_name in indexes_json['objects']:
+            if file_name != '':
+                assets_hash = str(indexes_json['objects'][file_name]['hash'])
+                first_two_hash = str(indexes_json['objects'][file_name]['hash'])[:2]
+
+                if not os.path.exists(os.path.dirname(os.path.join(save_path, 'objects', first_two_hash, assets_hash))):
+                    os.makedirs(os.path.dirname(os.path.join(save_path, 'objects', first_two_hash, assets_hash)))
+                if not os.path.exists(os.path.join(save_path, 'objects', first_two_hash, assets_hash)):
+                    t = hpsl.Network.download(
+                        '{}{}/{}'.format(self.api['https://resources.download.minecraft.net/'], first_two_hash,
+                                         assets_hash),
+                        os.path.join(save_path, 'objects', first_two_hash, assets_hash))
+                    threading_list.append(t)
+        for t in threading_list:
+            t.join()
+
+    def download_client(self):
+        file_json = self.json
         try:
-            save_path = os.path.join(minecraft_dir, 'versions', name, '{}.jar'.format(name))
+            save_path = self.jar_path
             if not os.path.exists(os.path.dirname(save_path)):
                 os.makedirs(os.path.dirname(save_path))
             if not os.path.exists(save_path):
                 hpsl.Network.download(str(file_json['downloads']['client']['url']).replace(
                     'https://launcher.mojang.com/', self.api[
-                        'https://launcher.mojang.com/']), save_path)
-                if os.path.exists(save_path):
-                    i = 0
-                    while hashlib.sha1(open(save_path, 'rb').read()).hexdigest() != str(file_json['downloads'][
-                                                                                            'client']['sha1']):
-                        i += 1
-                        print('The downloaded file sha1 does not match')
-
-                        hpsl.Network.download(str(file_json['downloads']['client']['url']).replace(
-                            'https://launcher.mojang.com/', self.api[
-                                'https://launcher.mojang.com/']), save_path)
-                        if i > 3:
-                            break
+                        'https://launcher.mojang.com/']), save_path, False)
 
         except BaseException as err:
             raise err
 
-    @staticmethod
-    def download_server(file_json: json, save_path: str):
-        try:
-            hpsl.Network.download(file_json['downloads']['server']['url'], save_path)
-        except BaseException as err:
-            raise err
-
-
-class Client:
-    @staticmethod
-    def get_client_json(ver: str, mc_dir: str) -> json:
-        path = os.path.join(mc_dir, 'versions', ver, '{}.json'.format(ver))
-        return json.load(open(path, 'r', encoding='utf-8'))
-
-    @staticmethod
-    def save_client_json(name: str, mc_dir: str, client_json: json):
-        path = os.path.join(mc_dir, 'versions', name, '{}.json'.format(name))
-        if not os.path.exists(os.path.dirname(path)):
-            os.makedirs(os.path.dirname(path))
-        open(path, 'w', encoding='utf8').write(json.dumps(client_json))
-
-    @staticmethod
-    def is_client_json_exist(name: str, mc_dir: str):
-        path = os.path.join(mc_dir, 'versions', name, '{}.json'.format(name))
-        return os.path.exists(path)
-
-    @staticmethod
-    def scan_java_path_windows() -> list:
-        java_list = []
-        for i in range(65, 91):
-            vol = chr(i) + ':\\'
-            if os.path.isdir(vol):
-                for root, file_dir, file_name in os.walk(vol):
-                    for file in file_name:
-                        if file == 'javaw.exe':
-                            java_list.append(os.path.join(root, file))
-        return java_list
-
-
-class Launch:
-    def __init__(self):
-        self.class_client = hpsl.GameFile.Client()
-        self.class_download = hpsl.GameFile.Download()
-
-    def launch(self, ver: str, minecraft_dir: str, java_path: str, jvm: str, player_name: str, uuid: str,
-               access_token: str,
+    def launch(self, java_path: str, jvm: str, player_login_parameters,
                extra_parameters: str,
                xmn='256m', xmx='1024m', height=480, width=854, version_isolation=False, version_type=''):
 
-        os.popen(self.get_launch_script(ver, minecraft_dir, java_path, jvm, player_name, uuid,
-                                        access_token,
+        os.popen(self.get_launch_script(java_path, jvm, player_login_parameters,
                                         extra_parameters, xmn, xmx, height, width, version_isolation, version_type))
 
-    def get_launch_script(self, ver: str, minecraft_dir: str, java_path: str, jvm: str, player_name: str, uuid: str,
-                          access_token: str,
+    def get_launch_script(self, java_path: str, jvm: str, player_login_parameters,
                           extra_parameters: str,
                           xmn='256m', xmx='1024m', height=480, width=854, version_isolation=False,
                           version_type='') -> str:
         if version_type == '':
             version_type = '{}-{}'.format(LauncherInformation.launcher_name, LauncherInformation.launcher_version)
-        client_json = self.class_client.get_client_json(ver, minecraft_dir)
+        client_json = self.json
         if client_json['minimumLauncherVersion'] <= 18:
-            return self.get_launch_script_18(access_token, extra_parameters, height, java_path, jvm,
-                                             minecraft_dir,
-                                             player_name, uuid, ver, version_isolation, version_type, width, xmn,
+            return self.get_launch_script_18(extra_parameters, height, java_path, jvm,
+                                             player_login_parameters, version_isolation, version_type, width, xmn,
                                              xmx)
         elif client_json['minimumLauncherVersion'] > 18:
-            return self.get_launch_script_19(access_token, extra_parameters, height, java_path, jvm,
-                                             minecraft_dir,
-                                             player_name, uuid, ver, version_isolation, version_type, width, xmn,
+            return self.get_launch_script_19(extra_parameters, height, java_path, jvm,
+                                             player_login_parameters, version_isolation, version_type, width, xmn,
                                              xmx)
 
-    def get_launch_script_19(self, access_token, extra_parameters, height, java_path, jvm, minecraft_dir,
-                             player_name,
-                             uuid, ver, version_isolation, version_type, width, xmn, xmx) -> str:
-
+    def get_launch_script_19(self, extra_parameters, height, java_path, jvm,
+                             player_login_parameters, version_isolation, version_type, width, xmn, xmx) -> str:
+        player_name, uuid, access_token = player_login_parameters
+        minecraft_dir = self.mc_dir
+        ver = self.name
         # get client json
-        client_json = self.class_client.get_client_json(ver, minecraft_dir)
+        client_json = self.json
 
         # get classpath
-        classpath = self.get_classpath(minecraft_dir, ver, client_json)
+        classpath = self.get_classpath()
 
         # get main class
         main_class = str(client_json['mainClass'])
@@ -374,9 +334,12 @@ class Launch:
         return Util.list2str(['"{}"'.format(java_path), jvm, main_class, minecraft_arg,
                               extra_parameters], ' ')
 
-    def get_launch_script_18(self, access_token, extra_parameters, height, java_path, jvm, minecraft_dir,
-                             player_name,
-                             uuid, ver, version_isolation, version_type, width, xmn, xmx) -> str:
+    def get_launch_script_18(self, extra_parameters, height, java_path, jvm,
+                             player_login_parameters, version_isolation, version_type, width, xmn, xmx) -> str:
+        player_name, uuid, access_token = player_login_parameters
+        minecraft_dir = self.mc_dir
+        ver = self.name
+
         # set extra parameters
         extra_parameters += '--height {} --width {}'.format(str(height), str(width))
 
@@ -386,10 +349,10 @@ class Launch:
                '-Xmn{} -Xmx{}'.format(xmn, xmx)
 
         # get client json
-        client_json = self.class_client.get_client_json(ver, minecraft_dir)
+        client_json = self.json
 
         # get classpath
-        classpath = '-cp "' + self.get_classpath(minecraft_dir, ver, client_json) + '"'
+        classpath = '-cp "' + self.get_classpath() + '"'
 
         # get main class
         main_class = str(client_json['mainClass'])
@@ -423,7 +386,7 @@ class Launch:
                               extra_parameters], ' ')
 
     def unzip_natives(self, ver: str, mc_dir):
-        client_json = self.class_client.get_client_json(ver, mc_dir)
+        client_json = self.json
 
         for lib_json in client_json['libraries']:
             download_type = ''
@@ -457,12 +420,92 @@ class Launch:
                     path = Util.path_conversion(os.path.join(mc_dir, 'libraries'), path)
                     Util.un_zip(path, os.path.join(mc_dir, 'versions', ver, '{}-natives'.format(ver)))
 
-    def get_classpath(self, minecraft_dir, ver, client_json):
-
+    def get_classpath(self):
+        ver = self.name
+        minecraft_dir = self.mc_dir
         classpath = ''
-        for file in self.class_download.get_client_files_list(client_json):
+        for file in self.get_client_files_list():
             if file[4] == 'lib' and file[0] != '':
                 classpath += Util.path_conversion(os.path.join(minecraft_dir, 'libraries'), file[0]) + ';'
 
         classpath = classpath + os.path.join(minecraft_dir, 'versions', ver, '{}.jar'.format(ver)) + ''
         return classpath
+
+
+class MinecraftDir:
+    def __init__(self, path: str):
+        self.path = path
+
+    def get_client(self, name: str) -> MinecraftClient:
+        return MinecraftClient(self.path, name)
+
+    def is_client_exists(self, name: str) -> bool:
+        return os.path.exists(os.path.join(self.path, 'versions', name))
+
+    def create_client(self, name: str):
+        os.makedirs(os.path.join(self.path, 'versions', name))
+        return MinecraftClient(self.path, name)
+
+
+class Download:
+
+    def __init__(self):
+        # 尽量不要用bmclapi,bmclapi的open bmclapi过不了ssl,会下载失败
+        self.bmclapi = {'https://launchermeta.mojang.com/': 'https://bmclapi2.bangbang93.com/',
+                        'https://launcher.mojang.com/': 'https://bmclapi2.bangbang93.com/',
+                        'https://files.minecraftforge.net/maven/': 'https://bmclapi2.bangbang93.com/maven/',
+                        'https://libraries.minecraft.net/': 'https://bmclapi2.bangbang93.com/maven/',
+                        'https://resources.download.minecraft.net/': 'https://bmclapi2.bangbang93.com/assets/'}
+
+        self.mcbbsapi = {}
+        for key, value in self.bmclapi.items():
+            self.mcbbsapi[key] = value.replace('https://bmclapi2.bangbang93.com', 'https://download.mcbbs.net')
+
+        self.mojangapi = {'https://launchermeta.mojang.com/': 'https://launchermeta.mojang.com/',
+                          'https://launcher.mojang.com/': 'https://launcher.mojang.com/',
+                          'https://files.minecraftforge.net/maven/': 'https://files.minecraftforge.net/maven/',
+                          'https://libraries.minecraft.net/': 'https://libraries.minecraft.net/',
+                          'https://resources.download.minecraft.net/': 'https://resources.download.minecraft.net/'}
+
+        self.api = self.mojangapi
+
+    def get_versions_list_online(self) -> json:
+        url = self.api['https://launchermeta.mojang.com/'] + 'mc/game/version_manifest.json'
+        data = hpsl.Network.web_request(url)
+
+        return json.loads(data)
+
+    def get_client_json_online(self, ver: str) -> json:
+
+        return json.loads(self.get_client_json_text_online(ver))
+
+    def get_client_json_text_online(self, ver: str) -> str:
+        url = ''
+        for i in self.get_versions_list_online()['versions']:
+            if i['id'] == ver:
+                url = i['url'].replace('https://launchermeta.mojang.com/', self.api['https://launchermeta.mojang.com/'])
+        try:
+            data = hpsl.Network.web_request(url)
+        except BaseException as err:
+            raise err
+
+        return data
+
+    @staticmethod
+    def download_server(file_json: json, save_path: str):
+        try:
+            hpsl.Network.download(file_json['downloads']['server']['url'], save_path)
+        except BaseException as err:
+            raise err
+
+    @staticmethod
+    def scan_java_path_windows() -> list:
+        java_list = []
+        for i in range(65, 91):
+            vol = chr(i) + ':\\'
+            if os.path.isdir(vol):
+                for root, file_dir, file_name in os.walk(vol):
+                    for file in file_name:
+                        if file == 'javaw.exe':
+                            java_list.append(os.path.join(root, file))
+        return java_list

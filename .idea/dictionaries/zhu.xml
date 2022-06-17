@@ -2,6 +2,8 @@
   <dictionary name="zhu">
     <words>
       <w>bmclapi</w>
+      <w>djava</w>
+      <w>heapdump</w>
       <w>hpsl</w>
       <w>mcbbsapi</w>
     </words>
