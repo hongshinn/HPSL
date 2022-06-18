@@ -1,33 +1,35 @@
 # HPSL
-[简体中文(当前语言)](https://github.com/hongshinn/HPSL/blob/master/readme.md)
+
+[简体中文](https://github.com/hongshinn/HPSL/blob/master/readme.md)
 |
-[English](https://github.com/hongshinn/HPSL/blob/master/readmes/Englishi.md)
+[English(current)](https://github.com/hongshinn/HPSL/blob/master/readmes/Englishi.md)
 
-## 介绍
-HPSL是一个未完工的python的minecraft启动器,当然你也可以当成一个高兼容性的启动模块
+Translation provided by Google Translate
+## introduce
+HPSL is an unfinished python minecraft launcher, of course you can also use it as a high compatibility launch module
 
-本启动器不依赖于任何第三方库
+This launcher does not depend on any third party library
 
-已测试过的python版本=['3.8.4', '3.11.0b3']
-## 计划
-- [x] 文件补全
-- [x] 原版客户端启动
-- [x] 高版本启动
-- [x] 多线程下载
-- [ ] java下载
-- [x] java自动扫描
+Tested python version=['3.8.4', '3.11.0b3']
+## plan
+- [x] file completion
+- [x] vanilla client launch
+- [x] high version launch
+- [x] Multithreading download
+- [ ] java download
+- [x] java auto scan
 - [ ] UI
 - [ ] Forge,Fabric,LiteLoader,Optifine
-- [ ] 修改窗口标题
-## 使用
-获取版本列表:
+- [ ] Modify window title
+## use
+Get a list of versions:
 ~~~ python
 import hpsl.GameFile
 pt = hpsl.GameFile.Download()
 pt.get_versions_list_online()
 ~~~
 
-安装版本+补全文件:
+Install version + completion file:
 ~~~ python
 import hpsl.GameFile
 mc_dir = hpsl.GameFile.MinecraftDir('F:\\.minecraft')
@@ -41,7 +43,7 @@ mc_ver.complete_files()
 
 ~~~
 
-补全文件
+Completion file
 ~~~ python
 import hpsl.GameFile
 mc_dir = hpsl.GameFile.MinecraftDir('F:\\.minecraft')
@@ -49,7 +51,7 @@ mc_ver = mc_dir.get_client('1.19')
 mc_ver.complete_files()
 ~~~
 
-启动游戏
+start the game
 ~~~ python
 import hpsl.GameFile
 java_path = 'E:\\jdk-17\\jdk-17_windows-x64_bin\\jdk-17.0.2\\bin\\java.exe'
@@ -58,7 +60,7 @@ mc_ver = mc_dir.get_client('1.19')
 mc_ver.launch(java_path, '', ('hsn', '0', '0'), '')
 ~~~
 
-单次实现下载,补全,启动实例
+Download, complete, and start an instance at a time
 ~~~ python
 import hpsl.GameFile
 java_path = 'E:\\jdk-17\\jdk-17_windows-x64_bin\\jdk-17.0.2\\bin\\java.exe'
