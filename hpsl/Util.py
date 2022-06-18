@@ -51,3 +51,7 @@ def get_sys_bits():
         return 'x86'
 
 
+def forge_url(mc_version: str, version: str, branch: str, category: str, forge_format: str) -> str:
+    branch = '-{}'.format(branch) if branch else ''
+    return 'net/minecraftforge/forge/' + mc_version + '-' + version + branch + '/forge-' + mc_version + '-' \
+           + version + branch + '-' + category + '.' + forge_format

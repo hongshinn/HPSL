@@ -3,6 +3,7 @@ import logging
 import os
 import platform
 import re
+import shutil
 import sys
 import threading
 
@@ -457,9 +458,14 @@ class MinecraftDir:
         os.makedirs(os.path.join(self.path, 'versions', name))
         return MinecraftClient(self.path, name)
 
+    def del_client(self, name: str):
+        shutil.rmtree(os.path.join(self.path, 'versions', name))
+
+    def get_client_list(self) -> list:
+        return os.listdir(os.path.join(self.path, 'versions'))
+
 
 class Download:
-
     def __init__(self):
         # 尽量不要用bmclapi,bmclapi的open bmclapi过不了ssl,会下载失败
         self.bmclapi = {'https://launchermeta.mojang.com/': 'https://bmclapi2.bangbang93.com/',
@@ -502,6 +508,12 @@ class Download:
 
         return data
 
+    def get_forge_list_online(self) -> json:
+        url = self.api['https://files.minecraftforge.net/maven/'] + 'net/minecraftforge/forge/json'
+        data = hpsl.Network.web_request(url)
+
+        return json.loads(data)
+
     @staticmethod
     def download_server(file_json: json, save_path: str):
         try:
@@ -520,4 +532,3 @@ class Download:
                         if file == 'javaw.exe':
                             java_list.append(os.path.join(root, file))
         return java_list
-
