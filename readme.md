@@ -1,7 +1,7 @@
 # HPSL
 [简体中文(当前语言)](https://github.com/hongshinn/HPSL/blob/master/readme.md)
 |
-[English](https://github.com/hongshinn/HPSL/blob/master/readmes/Englishi.md)
+[English](https://github.com/hongshinn/HPSL/blob/master/readmes/English.md)
 
 ## 介绍
 HPSL是一个未完工的python的minecraft启动器,当然你也可以当成一个高兼容性的启动模块
