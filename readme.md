@@ -19,7 +19,7 @@ HPSL是一个未完工的python的minecraft启动器,当然你也可以当成一
 - [ ] UI
 - [ ] Forge,Fabric,LiteLoader,Optifine
 - [ ] 修改窗口标题
-## 使用
+## 用法
 获取版本列表:
 ~~~ python
 import hpsl.GameFile

@@ -15,13 +15,13 @@ Tested python version=['3.8.4', '3.11.0b3']
 - [x] file completion
 - [x] vanilla client launch
 - [x] high version launch
-- [x] Multithreading download
+- [x] Multithreaded download
 - [ ] java download
 - [x] java auto scan
 - [ ] UI
 - [ ] Forge,Fabric,LiteLoader,Optifine
 - [ ] Modify window title
-## use
+## usage
 Get a list of versions:
 ~~~ python
 import hpsl.GameFile
