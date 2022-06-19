@@ -93,11 +93,11 @@ class MinecraftClient:
                 return_list.append([path, size, sha1, url, 'lib'])
             if 'classifiers' in lib_json['downloads']:
                 download_type = ''
-                if sys.platform.startswith('linux'):
+                if sys.platform.startswith('linux') and 'natives-linux' in lib_json['downloads']['classifiers']:
                     # linux
                     download_type = 'natives-linux'
 
-                elif sys.platform.startswith('darwin'):
+                elif sys.platform.startswith('darwin') and 'natives-osx' in lib_json['downloads']['classifiers']:
                     # mac os
                     download_type = 'natives-osx'
 
@@ -403,11 +403,11 @@ class MinecraftClient:
         for lib_json in client_json['libraries']:
             download_type = ''
             if 'classifiers' in lib_json['downloads']:
-                if sys.platform.startswith('linux'):
+                if sys.platform.startswith('linux') and 'natives-linux' in lib_json['downloads']['classifiers']:
                     # linux
                     download_type = 'natives-linux'
 
-                elif sys.platform.startswith('darwin'):
+                elif sys.platform.startswith('darwin') and 'natives-osx' in lib_json['downloads']['classifiers']:
                     # mac os
                     download_type = 'natives-osx'
 

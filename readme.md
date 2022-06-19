@@ -41,7 +41,7 @@ mc_ver.complete_files()
 
 ~~~
 
-补全文件
+补全文件:
 ~~~ python
 import hpsl.GameFile
 mc_dir = hpsl.GameFile.MinecraftDir('F:\\.minecraft')
@@ -49,7 +49,7 @@ mc_ver = mc_dir.get_client('1.19')
 mc_ver.complete_files()
 ~~~
 
-启动游戏
+启动游戏:
 ~~~ python
 import hpsl.GameFile
 java_path = 'E:\\jdk-17\\jdk-17_windows-x64_bin\\jdk-17.0.2\\bin\\java.exe'
@@ -58,7 +58,7 @@ mc_ver = mc_dir.get_client('1.19')
 mc_ver.launch(java_path, '', ('hsn', '0', '0'), '')
 ~~~
 
-单次实现下载,补全,启动实例
+单次实现下载,补全,启动实例:
 ~~~ python
 import hpsl.GameFile
 java_path = 'E:\\jdk-17\\jdk-17_windows-x64_bin\\jdk-17.0.2\\bin\\java.exe'
